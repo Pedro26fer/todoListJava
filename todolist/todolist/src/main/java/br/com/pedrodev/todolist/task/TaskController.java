@@ -16,8 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.pedrodev.todolist.utils.Utils;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
@@ -42,7 +40,7 @@ public class TaskController {
         }
 
         var task = this.taskRepository.save(taskModel);
-        return ResponseEntity.status(HttpStatus.OK).body(task);
+        return ResponseEntity.status(HttpStatus.CREATED).body(task);
     }
 
     @GetMapping("/")
@@ -53,15 +51,26 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public TaskModel update(@RequestBody TaskModel taskModel, @PathVariable UUID id, HttpServletRequest request) {
+    public ResponseEntity update(@RequestBody TaskModel taskModel, @PathVariable UUID id, HttpServletRequest request) {
         
-        var idUser = request.getAttribute("idUser");
-
+        
         var task = this.taskRepository.findById(id).orElse(null);
+
+        if(task == null){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Tarefa não encontrada");
+        }
+
+        var idUser = request.getAttribute("idUser");
+        
+        if(!task.getIdUser().equals(idUser)){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Você não tem permissão para atualizar esta tarefa");
+        }
 
         Utils.copyNonNNullProperties(taskModel, task);
 
-        return this.taskRepository.save(task);
+        var taskUpdateed = this.taskRepository.save(task);
+
+        return ResponseEntity.ok().body(taskUpdateed);
 
     }
 
